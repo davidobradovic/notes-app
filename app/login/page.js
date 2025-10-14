@@ -1,25 +1,23 @@
 "use client";
 import { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, FileText } from "lucide-react";
+import { login } from "@/lib/api-utils";
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+export default function LoginPage({ onLogin }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate login
-    setTimeout(() => {
-      setIsLoading(false);
-      console.log("Login attempt:", { email, password, rememberMe });
-      // Redirect to notes page
-      window.location.href = "/notes";
-    }, 1500);
+    const res = await login(username, password);
+    if (res.token) {
+      localStorage.setItem('token', res.token);
+      localStorage.setItem('role', res.role);
+      onLogin(res.token, res.role);
+    } else {
+      setError(res.error || 'Login failed');
+    }
   };
 
   return (
