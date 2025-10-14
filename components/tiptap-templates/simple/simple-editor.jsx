@@ -159,7 +159,7 @@ const MobileToolbarContent = ({
   </>
 )
 
-export function SimpleEditor() {
+export function SimpleEditor({ initialContent, onSave }) {
   const isMobile = useIsMobile()
   const [mobileView, setMobileView] = React.useState("main")
   const toolbarRef = React.useRef(null)
@@ -202,7 +202,7 @@ export function SimpleEditor() {
         onError: (error) => console.error("Upload failed:", error),
       }),
     ],
-    content,
+    content: initialContent || content,
   })
 
   const rect = useCursorVisibility({
@@ -215,6 +215,22 @@ export function SimpleEditor() {
       setMobileView("main")
     }
   }, [isMobile, mobileView])
+
+  // Handle content changes and call onSave
+  React.useEffect(() => {
+    if (!editor || !onSave) return;
+
+    const handleUpdate = () => {
+      const html = editor.getHTML();
+      onSave(html);
+    };
+
+    editor.on('update', handleUpdate);
+
+    return () => {
+      editor.off('update', handleUpdate);
+    };
+  }, [editor, onSave]);
 
   return (
     <div className="simple-editor-wrapper">

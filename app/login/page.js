@@ -2,21 +2,35 @@
 import { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, FileText } from "lucide-react";
 import { login } from "@/lib/api-utils";
+import { useRouter } from "next/navigation";
 
-export default function LoginPage({ onLogin }) {
+export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const res = await login(username, password);
-    if (res.token) {
-      localStorage.setItem('token', res.token);
-      localStorage.setItem('role', res.role);
-      onLogin(res.token, res.role);
-    } else {
-      setError(res.error || 'Login failed');
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const res = await login(username, password);
+      if (res.token) {
+        localStorage.setItem('token', res.token);
+        localStorage.setItem('role', res.role);
+        router.push('/');
+      } else {
+        setError(res.error || 'Login failed');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -34,23 +48,28 @@ export default function LoginPage({ onLogin }) {
 
         {/* Login Card */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-          <div className="space-y-6">
-            {/* Email Input */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Username Input */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email adresa
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                Korisničko ime
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Mail size={18} className="text-gray-400" />
                 </div>
                 <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
-                  placeholder="vas.email@primjer.com"
+                  placeholder="unesite korisničko ime"
                   required
                 />
               </div>
@@ -106,7 +125,7 @@ export default function LoginPage({ onLogin }) {
 
             {/* Submit Button */}
             <button
-              onClick={handleSubmit}
+              type="submit"
               disabled={isLoading}
               className="w-full py-3 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
@@ -122,7 +141,7 @@ export default function LoginPage({ onLogin }) {
                 "Prijavi se"
               )}
             </button>
-          </div>
+          </form>
 
           {/* Divider */}
           <div className="relative my-6">

@@ -19,12 +19,23 @@ model User {
   password String
   role     String // "user" or "owner"
   notes    Note[]
+  tables   Table[]
 }
 
 model Note {
   id        Int      @id @default(autoincrement())
   title     String
   content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Table {
+  id        Int      @id @default(autoincrement())
+  name      String   @default("Tabela")
+  rows      String   // JSON string of table rows
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   userId    Int

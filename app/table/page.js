@@ -1,17 +1,69 @@
 "use client";
-import { useState } from "react";
-import { Trash2, Plus, DollarSign } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Trash2, Plus, DollarSign, Loader2, CheckCircle2 } from "lucide-react";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function TablePage() {
   const [rows, setRows] = useState([
     { id: Date.now(), title: "", price: "" },
   ]);
+  const [currentTableId, setCurrentTableId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+  const [userRole, setUserRole] = useState('');
+  const [allTables, setAllTables] = useState([]);
+  const saveTimeout = useRef(null);
 
-  const addRow = () => setRows([...rows, { id: Date.now(), title: "", price: "" }]);
+  // Load tables on component mount
+  useEffect(() => {
+    const role = localStorage.getItem('role');
+    setUserRole(role);
+    
+    const fetchTables = async () => {
+      const token = localStorage.getItem("token");
+      try {
+        const response = await fetch("http://localhost:3001/api/tables", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data) && data.length > 0) {
+            if (role === 'owner') {
+              // Owner sees all tables
+              setAllTables(data);
+              // Load the first table
+              const firstTable = data[0];
+              setRows(JSON.parse(firstTable.rows));
+              setCurrentTableId(firstTable.id);
+            } else {
+              // Regular user sees only today's table
+              const todaysTable = data[0];
+              setRows(JSON.parse(todaysTable.rows));
+              setCurrentTableId(todaysTable.id);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching tables:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTables();
+  }, []);
+
+  const addRow = () => {
+    const newRows = [...rows, { id: Date.now(), title: "", price: "" }];
+    setRows(newRows);
+    handleSave(newRows);
+  };
   
   const deleteRow = (id) => {
     if (rows.length > 1) {
-      setRows(rows.filter(row => row.id !== id));
+      const newRows = rows.filter(row => row.id !== id);
+      setRows(newRows);
+      handleSave(newRows);
     }
   };
 
@@ -20,20 +72,150 @@ export default function TablePage() {
       row.id === id ? { ...row, [field]: value } : row
     );
     setRows(newRows);
+    handleSave(newRows);
+  };
+
+  // Auto-save when data changes
+  const handleSave = (newRows) => {
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(async () => {
+      setSaving(true);
+      setJustSaved(false);
+      try {
+        const token = localStorage.getItem("token");
+        
+        if (currentTableId) {
+          // Update existing table
+          const response = await fetch(`http://localhost:3001/api/tables/${currentTableId}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+              name: "Tabela", 
+              rows: newRows 
+            }),
+          });
+          if (response.ok) {
+            setJustSaved(true);
+            setTimeout(() => setJustSaved(false), 2000);
+          }
+        } else {
+          // Create new table
+          const response = await fetch("http://localhost:3001/api/tables", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+              name: "Tabela", 
+              rows: newRows 
+            }),
+          });
+          if (response.ok) {
+            const newTable = await response.json();
+            setCurrentTableId(newTable.id);
+            setJustSaved(true);
+            setTimeout(() => setJustSaved(false), 2000);
+          }
+        }
+      } catch (error) {
+        console.error("Error saving table:", error);
+      } finally {
+        setSaving(false);
+      }
+    }, 1000);
+  };
+
+  const loadTable = (table) => {
+    setRows(JSON.parse(table.rows));
+    setCurrentTableId(table.id);
   };
 
   const total = rows.reduce((sum, r) => sum + (parseFloat(r.price) || 0), 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+    <AuthGuard>
+      <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+      {/* Header */}
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-semibold tracking-tight">Tabele</h1>
+            {saving && (
+              <div className="flex items-center gap-1 text-sm text-gray-500">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Čuvanje...</span>
+              </div>
+            )}
+            {justSaved && (
+              <div className="flex items-center gap-1 text-sm text-green-600">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Sačuvano</span>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <a
+              href="/"
+              className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors shadow-sm"
+            >
+              Notes
+            </a>
+            <button
+              onClick={() => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('role');
+                window.location.href = '/login';
+              }}
+              className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors shadow-sm"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+      
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Tabela</h1>
-          <p className="text-gray-500 text-sm">Upravljanje uslugama i cijenama</p>
+          <div className="flex items-center justify-between mb-4 flex-wrap">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">{}</h1>
+              <p className="text-gray-500 text-sm">Upravljanje uslugama i cijenama</p>
+            </div>
+            {userRole === 'owner' && allTables.length > 1 && (
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Odaberite tabelu:</label>
+                <select
+                  value={currentTableId || ''}
+                  onChange={(e) => {
+                    const selectedTable = allTables.find(t => t.id === parseInt(e.target.value));
+                    if (selectedTable) loadTable(selectedTable);
+                  }}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {allTables.map(table => (
+                    <option key={table.id} value={table.id}>
+                      {new Date(table.createdAt).toLocaleDateString('sr-RS')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Table Container */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+            <Loader2 className="w-6 h-6 animate-spin mb-3" />
+            <p>Učitavanje tabela...</p>
+          </div>
+        ) : (
+          <>
+            {/* Table Container */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           {/* Table Header */}
           <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-700">
@@ -117,7 +299,10 @@ export default function TablePage() {
             )}
           </div>
         </div>
+          </>
+        )}
       </div>
-    </div>
+      </div>
+    </AuthGuard>
   );
 }

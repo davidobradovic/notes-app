@@ -17,24 +17,33 @@ export default class NotesController {
     async getNotes(req: AuthenticatedRequest, res: Response) {
         const { userId, role } = req.user!;
         if (role === 'owner') {
-            const notes = await prisma.note.findMany();
+            const notes = await prisma.note.findMany({
+                orderBy: {
+                    createdAt: 'desc'
+                }
+            });
             res.json(notes);
         } else {
+            // For regular users, return today's note specifically
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const tomorrow = new Date(today);
             tomorrow.setDate(today.getDate() + 1);
 
-            const notes = await prisma.note.findMany({
+            const todaysNote = await prisma.note.findFirst({
                 where: {
                     userId,
                     createdAt: {
                         gte: today,
                         lt: tomorrow
                     }
+                },
+                orderBy: {
+                    createdAt: 'desc'
                 }
             });
-            res.json(notes);
+            
+            res.json(todaysNote ? [todaysNote] : []);
         }
     }
 
