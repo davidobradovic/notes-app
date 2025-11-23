@@ -479,7 +479,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import srLocale from '@fullcalendar/core/locales/sr';
-import { LogOut, X, Edit2, Plus, Trash2 } from 'lucide-react';
+import { LogOut, X, Edit2, Plus, Trash2, Loader2 } from 'lucide-react';
 
 export default function SmartCalendar() {
   const [events, setEvents] = useState([]);
