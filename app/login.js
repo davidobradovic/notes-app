@@ -19,7 +19,7 @@ export default function LoginPage() {
       if (res.ok && data.token) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("role", data.role);
-        window.location.href = "/";
+        window.location.href = "/scheduler";
       } else {
         setError(data.error || "Login failed");
       }

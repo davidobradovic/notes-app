@@ -23,7 +23,7 @@ export default function TablePage() {
     const fetchTables = async () => {
       const token = localStorage.getItem("token");
       try {
-        const response = await fetch("https://triplexphoenix.davidtesla.online/api/tables", {
+        const response = await fetch("https://notes.gorillapoker.bet/api/tables", {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (response.ok) {
@@ -86,7 +86,7 @@ export default function TablePage() {
         
         if (currentTableId) {
           // Update existing table
-          const response = await fetch(`https://triplexphoenix.davidtesla.online/api/tables/${currentTableId}`, {
+          const response = await fetch(`https://notes.gorillapoker.bet/api/tables/${currentTableId}`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
@@ -103,7 +103,7 @@ export default function TablePage() {
           }
         } else {
           // Create new table
-          const response = await fetch("https://triplexphoenix.davidtesla.online/api/tables", {
+          const response = await fetch("https://notes.gorillapoker.bet/api/tables", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

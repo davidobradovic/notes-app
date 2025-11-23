@@ -34,7 +34,7 @@ export default function NotesPage() {
     const fetchNotes = async () => {
       const token = localStorage.getItem("token");
       try {
-        const response = await fetch("https://triplexphoenix.davidtesla.online/api/notes", {
+        const response = await fetch("https://notes.gorillapoker.bet/api/notes", {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (response.ok) {
@@ -80,7 +80,7 @@ export default function NotesPage() {
         const token = localStorage.getItem("token");
         
         if (currentNoteId) {
-          const response = await fetch(`https://triplexphoenix.davidtesla.online/api/notes/${currentNoteId}`, {
+          const response = await fetch(`https://notes.gorillapoker.bet/api/notes/${currentNoteId}`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
@@ -93,7 +93,7 @@ export default function NotesPage() {
             setTimeout(() => setJustSaved(false), 2000);
           }
         } else {
-          const response = await fetch("https://triplexphoenix.davidtesla.online/api/notes", {
+          const response = await fetch("https://notes.gorillapoker.bet/api/notes", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -123,7 +123,7 @@ export default function NotesPage() {
       const token = localStorage.getItem("token");
       
       if (currentNoteId) {
-        const response = await fetch(`https://triplexphoenix.davidtesla.online/api/notes/${currentNoteId}`, {
+        const response = await fetch(`https://notes.gorillapoker.bet/api/notes/${currentNoteId}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -136,7 +136,7 @@ export default function NotesPage() {
           setTimeout(() => setJustSaved(false), 2000);
         }
       } else {
-        const response = await fetch("https://triplexphoenix.davidtesla.online/api/notes", {
+        const response = await fetch("https://notes.gorillapoker.bet/api/notes", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

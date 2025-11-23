@@ -28,7 +28,7 @@
 //     const fetchEvents = async () => {
 //       const token = localStorage.getItem("token");
 //       try {
-//         const response = await fetch("http://localhost:3001/api/events", {
+//         const response = await fetch("https://notes.gorillapoker.bet/api/events", {
 //           headers: { Authorization: `Bearer ${token}` }
 //         });
 //         if (response.ok) {
@@ -144,7 +144,7 @@
 //       const token = localStorage.getItem("token");
       
 //       if (selectedEvent) {
-//         const response = await fetch(`http://localhost:3001/api/events/${selectedEvent.id}`, {
+//         const response = await fetch(`https://notes.gorillapoker.bet/api/events/${selectedEvent.id}`, {
 //           method: "PUT",
 //           headers: {
 //             "Content-Type": "application/json",
@@ -163,7 +163,7 @@
 //           setShowModal(false);
 //         }
 //       } else {
-//         const response = await fetch("http://localhost:3001/api/events", {
+//         const response = await fetch("https://notes.gorillapoker.bet/api/events", {
 //           method: "POST",
 //           headers: {
 //             "Content-Type": "application/json",
@@ -200,7 +200,7 @@
 //     try {
 //       const token = localStorage.getItem("token");
       
-//       const response = await fetch(`http://localhost:3001/api/events/${selectedEvent.id}`, {
+//       const response = await fetch(`https://notes.gorillapoker.bet/api/events/${selectedEvent.id}`, {
 //         method: "DELETE",
 //         headers: { Authorization: `Bearer ${token}` }
 //       });
@@ -473,22 +473,22 @@
 //   );
 // }
 "use client";
-import { useState, useEffect } from 'react';
-import { Calendar, momentLocalizer } from 'react-big-calendar';
-import moment from 'moment';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { Plus, X, Clock, CalendarDays, Tag, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
-
-const localizer = momentLocalizer(moment);
+import { useState, useEffect, useRef } from 'react';
+import FullCalendar from '@fullcalendar/react';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import srLocale from '@fullcalendar/core/locales/sr';
+import { LogOut, X, Edit2, Plus, Trash2 } from 'lucide-react';
 
 export default function SmartCalendar() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [userRole, setUserRole] = useState('');
+  const calendarRef = useRef(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -505,15 +505,20 @@ export default function SmartCalendar() {
     const fetchEvents = async () => {
       const token = localStorage.getItem("token");
       try {
-        const response = await fetch("http://localhost:3001/api/events", {
+        const response = await fetch("https://notes.gorillapoker.bet/api/events", {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (response.ok) {
           const data = await response.json();
           const transformedEvents = data.map(event => ({
-            ...event,
-            start: new Date(event.start),
-            end: new Date(event.end)
+            id: event.id,
+            title: event.title,
+            start: event.start,
+            end: event.end,
+            allDay: event.allDay || false,
+            description: event.description || '',
+            backgroundColor: '#3b82f6',
+            borderColor: '#2563eb'
           }));
           setEvents(transformedEvents);
         }
@@ -526,48 +531,60 @@ export default function SmartCalendar() {
     fetchEvents();
   }, []);
 
-  const handleSelectSlot = (slotInfo) => {
+  const handleDateSelect = (selectInfo) => {
+    const calendarApi = selectInfo.view.calendar;
+    calendarApi.unselect();
+
     if (userRole !== 'owner') {
       const today = new Date();
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+      const selectedDate = new Date(selectInfo.start);
       
-      if (slotInfo.start < startOfDay || slotInfo.start >= endOfDay) {
+      if (selectedDate < startOfDay || selectedDate >= endOfDay) {
         alert('Možete kreirati događaje samo za današnji dan.');
         return;
       }
     }
 
     setSelectedEvent(null);
-    setSelectedSlot(slotInfo);
     setFormData({
       title: '',
       description: '',
-      start: slotInfo.start,
-      end: slotInfo.end,
-      allDay: slotInfo.allDay || false
+      start: new Date(selectInfo.start),
+      end: new Date(selectInfo.end),
+      allDay: selectInfo.allDay
     });
     setShowModal(true);
   };
 
-  const handleSelectEvent = (event) => {
-    setSelectedEvent(event);
-    setFormData({
+  const handleEventClick = (clickInfo) => {
+    const event = clickInfo.event;
+    setSelectedEvent({
+      id: event.id,
       title: event.title,
-      description: event.description || '',
       start: event.start,
       end: event.end,
-      allDay: event.allDay || false
+      allDay: event.allDay,
+      description: event.extendedProps.description || ''
+    });
+    setFormData({
+      title: event.title,
+      description: event.extendedProps.description || '',
+      start: event.start,
+      end: event.end,
+      allDay: event.allDay
     });
     setShowModal(true);
   };
 
   const formatDateTimeLocal = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
@@ -582,13 +599,15 @@ export default function SmartCalendar() {
       const token = localStorage.getItem("token");
       
       const eventData = {
-        ...formData,
+        title: formData.title,
+        description: formData.description,
         start: typeof formData.start === 'string' ? new Date(formData.start) : formData.start,
-        end: typeof formData.end === 'string' ? new Date(formData.end) : formData.end
+        end: typeof formData.end === 'string' ? new Date(formData.end) : formData.end,
+        allDay: formData.allDay
       };
       
       if (selectedEvent) {
-        const response = await fetch(`http://localhost:3001/api/events/${selectedEvent.id}`, {
+        const response = await fetch(`https://notes.gorillapoker.bet/api/events/${selectedEvent.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -601,13 +620,22 @@ export default function SmartCalendar() {
           const updatedEvent = await response.json();
           setEvents(events.map(event => 
             event.id === updatedEvent.id 
-              ? { ...updatedEvent, start: new Date(updatedEvent.start), end: new Date(updatedEvent.end) }
+              ? {
+                  id: updatedEvent.id,
+                  title: updatedEvent.title,
+                  start: updatedEvent.start,
+                  end: updatedEvent.end,
+                  allDay: updatedEvent.allDay,
+                  description: updatedEvent.description || '',
+                  backgroundColor: '#3b82f6',
+                  borderColor: '#2563eb'
+                }
               : event
           ));
           setShowModal(false);
         }
       } else {
-        const response = await fetch("http://localhost:3001/api/events", {
+        const response = await fetch("https://notes.gorillapoker.bet/api/events", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -618,10 +646,15 @@ export default function SmartCalendar() {
         
         if (response.ok) {
           const newEvent = await response.json();
-          setEvents([...events, { 
-            ...newEvent, 
-            start: new Date(newEvent.start), 
-            end: new Date(newEvent.end) 
+          setEvents([...events, {
+            id: newEvent.id,
+            title: newEvent.title,
+            start: newEvent.start,
+            end: newEvent.end,
+            allDay: newEvent.allDay,
+            description: newEvent.description || '',
+            backgroundColor: '#3b82f6',
+            borderColor: '#2563eb'
           }]);
           setShowModal(false);
         }
@@ -645,7 +678,7 @@ export default function SmartCalendar() {
     try {
       const token = localStorage.getItem("token");
       
-      const response = await fetch(`http://localhost:3001/api/events/${selectedEvent.id}`, {
+      const response = await fetch(`https://notes.gorillapoker.bet/api/events/${selectedEvent.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -673,7 +706,7 @@ export default function SmartCalendar() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-700">Učitavanje kalendara...</p>
+          <p className="mt-4 text-gray-700 font-medium">Učitavanje kalendara...</p>
         </div>
       </div>
     );
@@ -683,61 +716,88 @@ export default function SmartCalendar() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <CalendarDays className="w-8 h-8 text-blue-600" />
-              <div>
-                <h1 className="text-3xl font-bold text-gray-800">Kalendar Događaja</h1>
-                <p className="text-sm text-gray-600 mt-1">
-                  Korisnik: <span className="font-semibold capitalize">{userRole}</span>
-                </p>
+        <header className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-semibold tracking-tight">Raspored</h1>
+            {saving && (
+              <div className="flex items-center gap-1 text-sm text-gray-500">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Čuvanje...</span>
               </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <a
+              href="/"
+              className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors shadow-sm"
             >
-              <LogOut className="w-4 h-4" />
-              Odjavi se
+              Notes
+            </a>
+            <a
+              href="/table"
+              className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors shadow-sm"
+            >
+              Tabela
+            </a>
+            <button
+              onClick={() => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('role');
+                window.location.href = '/login';
+              }}
+              className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors shadow-sm"
+            >
+              Logout
             </button>
           </div>
-          <p className="text-gray-600 mt-3">
-            {userRole === 'owner' 
-              ? 'Kliknite na bilo koji vremenski slot za kreiranje događaja'
-              : 'Možete kreirati događaje samo za današnji dan'}
-          </p>
         </div>
+      </header>
 
         {/* Calendar */}
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <div style={{ height: '650px' }}>
-            <Calendar
-              localizer={localizer}
-              events={events}
-              startAccessor="start"
-              endAccessor="end"
-              onSelectSlot={handleSelectSlot}
-              onSelectEvent={handleSelectEvent}
-              selectable
-              views={['month', 'week', 'day', 'agenda']}
-              defaultView="week"
-              messages={{
-                today: 'Danas',
-                previous: 'Prethodno',
-                next: 'Sledeće',
-                month: 'Mesec',
-                week: 'Nedelja',
-                day: 'Dan',
-                agenda: 'Agenda',
-                date: 'Datum',
-                time: 'Vreme',
-                event: 'Događaj',
-                noEventsInRange: 'Nema događaja u ovom periodu',
-                showMore: total => `+ Prikaži još (${total})`
-              }}
-            />
-          </div>
+          <FullCalendar
+            ref={calendarRef}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            initialView="timeGridWeek"
+            headerToolbar={{
+              left: 'prev,next today',
+              center: 'title',
+              right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            }}
+            locale={srLocale}
+            buttonText={{
+              today: 'Danas',
+              month: 'Mesec',
+              week: 'Nedelja',
+              day: 'Dan'
+            }}
+            slotMinTime="06:00:00"
+            slotMaxTime="24:00:00"
+            height="auto"
+            events={events}
+            editable={false}
+            selectable={true}
+            selectMirror={true}
+            dayMaxEvents={true}
+            weekends={true}
+            select={handleDateSelect}
+            eventClick={handleEventClick}
+            allDaySlot={true}
+            slotDuration="01:00:00"
+            slotLabelInterval="01:00"
+            nowIndicator={true}
+            eventTimeFormat={{
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            }}
+            slotLabelFormat={{
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            }}
+          />
         </div>
 
         {/* Event Modal */}
@@ -746,6 +806,7 @@ export default function SmartCalendar() {
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                  {selectedEvent ? <Edit2 className="w-6 h-6 text-blue-600" /> : <Plus className="w-6 h-6 text-blue-600" />}
                   {selectedEvent ? 'Uredi Događaj' : 'Novi Događaj'}
                 </h2>
                 <button
@@ -838,8 +899,9 @@ export default function SmartCalendar() {
                     <button
                       onClick={handleDeleteEvent}
                       disabled={saving}
-                      className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center justify-center gap-2 flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
+                      <Trash2 className="w-4 h-4" />
                       {saving ? 'Brisanje...' : 'Obriši'}
                     </button>
                   )}
@@ -858,51 +920,17 @@ export default function SmartCalendar() {
       </div>
 
       <style jsx global>{`
-        .rbc-event {
-          border-radius: 4px;
-          padding: 4px 8px;
-          background-color: #3b82f6;
-          border: none;
+        .fc {
+          font-family: inherit;
         }
-        .rbc-event:hover {
-          opacity: 0.85;
+        .fc-event {
           cursor: pointer;
         }
-        .rbc-toolbar {
-          margin-bottom: 20px;
-          padding: 10px;
-          background: #f8fafc;
-          border-radius: 8px;
+        .fc-event:hover {
+          opacity: 0.9;
         }
-        .rbc-toolbar button {
-          border-radius: 6px;
-          padding: 8px 16px;
-          border: 1px solid #e5e7eb;
-          background: white;
-          font-weight: 500;
-        }
-        .rbc-toolbar button:hover {
-          background-color: #f3f4f6;
-        }
-        .rbc-toolbar button.rbc-active {
-          background-color: #3b82f6;
-          color: white;
-          border-color: #3b82f6;
-        }
-        .rbc-today {
-          background-color: #eff6ff;
-        }
-        .rbc-header {
-          padding: 12px 4px;
-          font-weight: 600;
-          background: #f8fafc;
-        }
-        .rbc-time-slot {
-          min-height: 40px;
-        }
-        .rbc-current-time-indicator {
-          background-color: #ef4444;
-          height: 2px;
+        .fc-button {
+          text-transform: none !important;
         }
       `}</style>
     </div>
