@@ -23,7 +23,7 @@ export default function TablePage() {
     const fetchTables = async () => {
       const token = localStorage.getItem("token");
       try {
-        const response = await fetch("http://localhost:3001/api/tables", {
+        const response = await fetch("https://triplexphoenix.davidtesla.online/api/tables", {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (response.ok) {
@@ -86,7 +86,7 @@ export default function TablePage() {
         
         if (currentTableId) {
           // Update existing table
-          const response = await fetch(`http://localhost:3001/api/tables/${currentTableId}`, {
+          const response = await fetch(`https://triplexphoenix.davidtesla.online/api/tables/${currentTableId}`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
@@ -103,7 +103,7 @@ export default function TablePage() {
           }
         } else {
           // Create new table
-          const response = await fetch("http://localhost:3001/api/tables", {
+          const response = await fetch("https://triplexphoenix.davidtesla.online/api/tables", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -163,6 +163,12 @@ export default function TablePage() {
               className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors shadow-sm"
             >
               Notes
+            </a>
+            <a
+              href="/scheduler"
+              className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors shadow-sm"
+            >
+              Raspored
             </a>
             <button
               onClick={() => {

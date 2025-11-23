@@ -233,17 +233,11 @@ export function SimpleEditor({ initialContent, onSave }) {
   }, [editor, onSave]);
 
   return (
-    <div className="simple-editor-wrapper">
+    <div className="simple-editor-wrapper w-full overflow-auto">
       <EditorContext.Provider value={{ editor }}>
         <Toolbar
           ref={toolbarRef}
-          style={{
-            ...(isMobile
-              ? {
-                  bottom: `calc(100% - ${'100vh' - rect.y}px)`,
-                }
-              : {}),
-          }}>
+          >
           {mobileView === "main" ? (
             <MainToolbarContent
               onHighlighterClick={() => setMobileView("highlighter")}
